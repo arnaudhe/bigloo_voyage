@@ -1,11 +1,11 @@
 #!/bin/bash
 
-if [ -e "nginx_pulsion/pulsion/config_pusion" ]
+if [ -e "nginx_pulsion/pulsion/config_pulsion" ]
 then
     import nginx "./nginx_pulsion"
 fi
 
-if [ -e "mysql_pulsion/pulsion/config_pusion" ]
+if [ -e "mysql_pulsion/pulsion/config_pulsion" ]
 then
     import mysql "./mysql_pulsion"
 fi
