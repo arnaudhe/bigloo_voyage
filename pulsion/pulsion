@@ -1,0 +1,788 @@
+#!/bin/bash
+
+# Pulsion console
+#
+# All users scripts are in the config pulsion file
+# Usage : ./pulsion/pulsion
+# Default config pulsion file parameter is set to pulsion/config_pulsion
+#
+
+
+
+# Environment variables
+TEMPORARY_FOLDER="/tmp/Pulsion/$RANDOM"
+SCRIPT_PATH="`pwd`"
+LOCAL_SCRIPT_PULSION_PATH="$(dirname "${BASH_SOURCE[0]}")/pulsion"
+CONFIG_FILE="pulsion/config_pulsion"
+COMMAND="default"
+ACTION="process" # { process, help }
+VERBOSE=1 # { 1=high importance only, 5=all importance }
+DEPLOYMENT_CONFURATION_FILE_PATH="pulsion/config/deploy_config"
+
+
+
+# Return 0 (true) if the command in param $1 exist
+# Usage : if is_command_exist $1; then
+function is_command_exist {
+
+	if [ $# -ne 1 ]; then
+		return 1
+	fi
+
+	if which $1 > /dev/null; then
+		return 0
+	fi
+
+	return 1
+
+}
+
+# Exit if user is not root
+function require_root {
+
+	if ! is_root; then
+		echo "/!\ Usage : sudo pulsion/pulsion"
+		exit 1
+	fi
+
+}
+
+# Return 0 (true) if the function in param $1 exist
+# Usage : if is_function_exist $1; then
+function is_function_exist {
+
+	if [ $# -ne 1 ]; then
+		return 1
+	fi
+
+	if type -t $1 | grep -q "^function$" ; then
+		return 0
+	fi
+
+	return 1
+
+}
+
+# Return 0 (true) if the root mode is activated
+function is_root {
+
+	if [ "$(id -u)" != "0" ]; then
+		return 1
+	fi
+	return 0
+
+}
+
+# Display the platform
+# Usage : if [[ $(get_platform) != "osx" ]];
+function get_platform {
+
+	unamestr=`uname`
+	if [[ "$unamestr" == 'Linux' ]]; then
+	   echo "linux"
+	elif [[ "$unamestr" == 'Darwin' ]]; then
+	   echo "osx"
+	fi
+
+}
+
+# Return true if the list of arguments contains $1
+function has_param {
+
+	search=$1
+	shift
+	for param in "$@"
+	do
+		if [[ "$param" == "$search" ]]; then
+			return 0
+		fi
+	done
+
+	return 1
+
+}
+
+# Return the value associate to one param
+# myName="$(get_param_value --name "$@")"
+function get_param_value {
+
+	search=$1
+	next=0
+
+	shift
+	for param in "$@"
+	do
+		if [[ "$param" == "$search" ]]; then
+			next=1
+		elif [ $next -eq 1 ]; then
+			echo "$param"
+			return 0
+		fi
+	done
+
+	return 1
+
+}
+
+# Display or not the param $1 depending on the verbose level
+function print {
+
+	if [ $# -eq 2 ]; then
+		if [ $1 -le $VERBOSE ]; then
+			echo "$2"
+		fi
+	fi
+
+	# If no verbose, always display the value
+	if [ $# -eq 1 ]; then
+		echo "$1"
+	fi
+
+}
+
+function verbose {
+
+	print "$@"
+
+}
+
+function p {
+
+	print "$@"
+
+}
+
+# Search a value in an array and return the index where value is found
+# Return -1 if nothing is found
+# index="$(get_index_in_array "$value" "${array[@]}")"
+function get_index_in_array {
+	value=$1
+	shift
+	array=("${@}")
+
+	for i in "${!array[@]}"; do
+	   if [[ "${array[$i]}" = "${value}" ]]; then
+		   echo "$i"
+		   return 0;
+	   fi
+	done
+
+	echo "-1"
+	return 1
+}
+
+# Sudo is impossible directly on a function, inside a script
+# So we emulate a fake extern file with function body inside
+function exesudo {
+
+	mkdir -p /tmp/pulsion/shm
+
+    local _funcname_="$1"
+    local params=( "$@" )               ## array containing all params passed here
+    local tmpfile="/tmp/pulsion/shm/$RANDOM"    ## temporary file
+    local filecontent                   ## content of the temporary file
+    local regex                         ## regular expression
+    local func                          ## function source
+
+    # Shift the first param (which is the name of the function)
+    unset params[0]              ## remove first element
+    # params=( "${params[@]}" )     ## repack array
+
+    content="#!/bin/bash\n\n"
+
+    # Write the params array
+    content="${content}params=(\n"
+
+    regex="\s+"
+    for param in "${params[@]}"
+    do
+        if [[ "$param" =~ $regex ]]; then
+            content="${content}\t\"${param}\"\n"
+        else
+            content="${content}\t${param}\n"
+        fi
+    done
+
+    content="$content)\n"
+    echo -e "$content" > "$tmpfile"
+
+    # Append the function source
+    echo "#$( type "$_funcname_" )" >> "$tmpfile"
+
+    # Append the call to the function
+    echo -e "\n$_funcname_ \"\${params[@]}\"\n" >> "$tmpfile"
+
+    # Execute the temporary file with sudo
+    sudo bash "$tmpfile"
+    rm "$tmpfile"
+
+}
+
+
+# Redirect the stream to the stream::private functions
+
+function stream::print {
+	stream::private
+	verbose="$1"
+	shift;
+	"$@" 2>&1 | Write "$verbose"
+}
+
+function stream::print-stderr {
+	stream::private
+	verbose="$1"
+	shift;
+	"$@" 2>&1 >/dev/null | Write "$verbose"
+}
+
+function stream::print-stdout {
+	stream::private
+	verbose="$1"
+	shift;
+	"$@" | Write "$verbose"
+}
+
+function stream::filter {
+	stream::private
+	filterRegex="$1"
+	shift;
+	"$@" 2>&1 | Filter "$filterRegex"
+}
+
+function stream::action {
+	stream::private
+	action="$1"
+	shift;
+	"$@" 2>&1 | Action "$action"
+}
+
+function stream::to-file {
+	filename="$1"
+	shift;
+	"$@" > $filename 2>&1
+}
+
+
+# Apply required behaviour on input lines feed
+
+function stream::private {
+
+	# Print each input value with specific verbose
+	function Write {
+		while read IN
+		do
+			print $1 "$IN"
+		done
+	}
+
+	# Exec each input value as FIRST param of a command
+	function Action {
+		while read IN
+		do
+			"$1" "$IN"
+		done
+	}
+
+	# Print at verbose 1 only if regex match with input value
+	function Filter {
+		while read IN
+		do
+			if [[ "$IN" == $1 ]]; then
+				print 1 "$IN"
+			fi
+		done
+	}
+
+}
+
+# Manage multiple feeds at the same time
+
+# Store the total number of duplication of feed we have (maxi 5)
+declare DUPLICATORS_COMMANDS_COUNT=0
+
+function stream::duplicator::new {
+	DUPLICATORS_COMMANDS_COUNT=0
+}
+
+# Add a new duplication of the data feed.
+# 	New feed data spreads through pipeline of commands.
+# 	Pipeline can contain an infinite number of commands.
+function stream::duplicator::add {
+
+	if [ "$DUPLICATORS_COMMANDS_COUNT" -gt 5 ]; then
+		p 1 "You can't add more than five elements in pipeline. Open an issue on Github if you need more."
+		return
+	fi
+
+	OLDIFS=$IFS
+	IFS='='
+
+	read -a DUPLICATORS_COMMANDS_$DUPLICATORS_COMMANDS_COUNT <<< "$@"
+
+	((DUPLICATORS_COMMANDS_COUNT++))
+	IFS=$OLDIFS
+}
+
+# Take the data source comand, execute it and redirect it output to all feed pipelines
+function stream::duplicator::forward {
+	stream::private
+
+	if [ $DUPLICATORS_COMMANDS_COUNT -eq 1 ]; then
+		"$@" 2>&1 | tee >(${DUPLICATORS_COMMANDS_0[@]} Write 1) \
+						>/dev/null
+	fi
+	if [ $DUPLICATORS_COMMANDS_COUNT -eq 2 ]; then
+		"$@" 2>&1 | tee >(${DUPLICATORS_COMMANDS_0[@]} Write 1) \
+						>(${DUPLICATORS_COMMANDS_1[@]} Write 1) \
+						>/dev/null
+	fi
+	if [ $DUPLICATORS_COMMANDS_COUNT -eq 3 ]; then
+		"$@" 2>&1 | tee >(${DUPLICATORS_COMMANDS_0[@]} Write 1) \
+						>(${DUPLICATORS_COMMANDS_1[@]} Write 1) \
+						>(${DUPLICATORS_COMMANDS_2[@]} Write 1) \
+						>/dev/null
+	fi
+	if [ $DUPLICATORS_COMMANDS_COUNT -eq 4 ]; then
+		"$@" 2>&1 | tee >(${DUPLICATORS_COMMANDS_0[@]} Write 1) \
+						>(${DUPLICATORS_COMMANDS_1[@]} Write 1) \
+						>(${DUPLICATORS_COMMANDS_2[@]} Write 1) \
+						>(${DUPLICATORS_COMMANDS_3[@]} Write 1) \
+						>/dev/null
+	fi
+	if [ $DUPLICATORS_COMMANDS_COUNT -eq 5 ]; then
+		"$@" 2>&1 | tee >(${DUPLICATORS_COMMANDS_0[@]} Write 1) \
+						>(${DUPLICATORS_COMMANDS_1[@]} Write 1) \
+						>(${DUPLICATORS_COMMANDS_2[@]} Write 1) \
+						>(${DUPLICATORS_COMMANDS_3[@]} Write 1) \
+						>(${DUPLICATORS_COMMANDS_4[@]} Write 1) \
+						>/dev/null
+	fi
+}
+
+
+
+# *********** How to close a channel after it is started ************
+# FIXME Problem is that pipe run in an isolate scope of variables
+# 		It's why stream::channel::stop fail because of STREAM_CHANNELS_ that is not available
+#		Child scope can read parent scope but not write in it so channel::stop can't update parent when call in loading (in pipe)
+# 		But channel can write in parent if it launch from main script and loading can read it
+#		Not perfectly sure of problem...
+#
+#
+# function ChannelFilter {
+# 	stream_name="$1"
+# 	while read IN
+# 	do
+# 		echo ${!stream_name[0]}
+# 		if [[ "${!stream_name[0]}" == "run"  ]]; then
+# 			print 1 "$IN"
+# 		fi
+# 	done
+# }
+#
+# function stream::channel::control {
+# 	stream_name="STREAM_CHANNELS_$1"
+# 	if [ -z ${!stream_name} ]; then
+# 		echo "declare"
+# 		eval "$stream_name=(\"run\")"
+# 	fi
+# 	shift;
+# 	"$@" 2>&1 | ChannelFilter "$stream_name"
+# }
+#
+# function stream::channel::stop {
+# 	stream_name="STREAM_CHANNELS_$1"
+# 	echo "stop $stream_name ${!stream_name}"
+# 	eval "$stream_name=(\"stopped\")"
+# }
+
+# ******** Debug or improve stream::duplicator::add
+
+# If I want to process from top to bottom ---
+
+# read -a reverse_array <<< "$@"
+#
+# final_array_name="DUPLICATORS_COMMANDS_$DUPLICATORS_COMMANDS_COUNT"
+#
+# eval "$final_array_name=()"
+# for ((i=${#reverse_array[@]} - 1; i >= 0; i--)) ; do
+#     eval "$final_array_name+=(\"${reverse_array[i]}\")"
+# done
+
+# For debug ---
+
+# var="DUPLICATORS_COMMANDS_$DUPLICATORS_COMMANDS_COUNT[0]"
+# var1="DUPLICATORS_COMMANDS_$DUPLICATORS_COMMANDS_COUNT[1]"
+# var2="DUPLICATORS_COMMANDS_$DUPLICATORS_COMMANDS_COUNT[2]"
+# var3="DUPLICATORS_COMMANDS_$DUPLICATORS_COMMANDS_COUNT[3]"
+# var4="DUPLICATORS_COMMANDS_$DUPLICATORS_COMMANDS_COUNT[4]"
+# varall="DUPLICATORS_COMMANDS_$DUPLICATORS_COMMANDS_COUNT[@]"
+# echo "0: ${!var}"
+# echo "1: ${!var1}"
+# echo "2: ${!var2}"
+# echo "3: ${!var3}"
+# echo "4: ${!var4}"
+# echo "all: ${!varall}"
+
+
+
+IMPORTS_NAME=()
+IMPORTS_PATH=()
+IMPORTS_COMMANDS=()
+
+# Declare the import of pulsion project
+# Use in pulsion_config :
+#    import core "/.../path/myproject"
+function import {
+
+	name=$1
+	path=$2
+
+	if [ $# -eq 2 ]; then
+
+		print 4 "   - Import $name ($path)"
+		IMPORTS_NAME+=("$name")
+		IMPORTS_PATH+=("$path")
+		return
+
+	fi
+
+	print 1 "Import \"$name\" failed. You must specify name & path."
+	exit 1
+
+}
+
+# Iterate over imported pulsion project,
+# check if pulsion project are valids,
+# read all commands of imported pulsion projects and store it
+function load_imports {
+
+	length=${#IMPORTS_NAME[*]}
+
+	for (( i=0; i<=$(( $length -1 )); i++ ))
+	do
+		path=${IMPORTS_PATH[$i]}
+		name=${IMPORTS_NAME[$i]}
+
+		if ! is_pulsion_project "$path"; then
+			print 1 "Import of \"$name\" aborted."
+			IMPORTS_COMMANDS+=("/!\\ $name is not a valid pulsion project")
+			continue
+		fi
+
+		cd $path
+		IMPORTS_COMMANDS+=("$(./pulsion/pulsion list)")
+		cd - > /dev/null
+	done
+
+}
+
+# Check if provided folder is a pulsion project
+function is_pulsion_project {
+
+	path=$1
+
+	if [ ! -d $path ]; then
+		print 1 "Imported directory does not exist."
+		return 1
+	fi
+
+	cd $path
+
+	if [ ! -f ./pulsion/config_pulsion ]; then
+		cd - > /dev/null
+		print 1 "Imported project is not a pulsion project (no config_pulsion file)."
+		return 1
+	fi
+
+	if [ ! -f ./pulsion/pulsion ]; then
+		cd - > /dev/null
+		print 1 "Imported project is initialized (no pulsion script file)."
+		return 1
+	fi
+
+	cd - > /dev/null
+	return 0
+
+}
+
+# List imports as string
+function imports_to_string {
+
+	prefix_output=$1
+
+	if [ $# -ne 1 ]; then
+		print 2 "Error : Bad usage of function \"imports_to_string\""
+		return
+	fi
+
+	for (( i=0; i<=$(( $length -1 )); i++ ))
+	do
+		is_valid=false
+		name=${IMPORTS_NAME[$i]}
+		commands_availables=${IMPORTS_COMMANDS[$i]}
+
+		for command in $commands_availables
+		do
+		    print 1 "$prefix_output$name::$command"
+		done
+
+		print 1 ""
+	done
+
+}
+
+# Get path of an import from it's name
+function get_import_path {
+	name=$1
+	must_echo=$2
+
+	if [ $# -ne 2 ]; then
+		print 2 "Error : Bad usage of function \"get_import_path\""
+		return
+	fi
+
+	index="$(get_index_in_array "$name" "${IMPORTS_NAME[@]}")"
+
+	if [[ $index == -1 ]]; then
+		print 1 "\"$name\" pulsion project is not imported in project"
+		return 1
+	fi
+
+	if $must_echo; then
+		echo "${IMPORTS_PATH[$index]}"
+	fi
+
+	return 0
+}
+
+
+FORWARDED=1
+
+# Gère le lecture des paramètres passés à la console
+function interpret_command_line {
+	if [[ $1 == *"::"* ]]; then
+		forward_command "$@"
+		FORWARDED=0
+	else
+		execute_command "$@"
+		FORWARDED=1
+	fi
+}
+
+# Execution of command require to forward command to an imported pulsion project
+function forward_command {
+	IFS=':'
+	read -r sub_pulsion_project_name rest <<< "$@"
+	IFS=' '
+	read -r cmd useless <<< "$rest"
+
+	if get_import_path "$sub_pulsion_project_name" false; then
+		path="$(get_import_path "$sub_pulsion_project_name" true)"
+	else
+		return 1
+	fi
+
+	shift
+	cd "$path" > /dev/null
+	./pulsion/pulsion "${cmd:1}" "$@"
+	cd - > /dev/null
+}
+
+# Execute the command
+function execute_command {
+	command_set=0
+	help_mode=0
+	initial_params="$@"
+
+	while test $# -gt 0
+	do
+	        case "$1" in
+
+	                -c)		# Path to configuration file
+	                        shift
+	                        ## Already process in launcher load_config_file
+	                        shift
+	                        ;;
+
+	                -v)		# Level du mode verbose (print)
+							shift
+							VERBOSE=$1
+							shift
+							;;
+
+					--help*) # Display help for one command
+							ACTION="help $initial_params"
+							break
+							;;
+
+					-h)
+							ACTION="help $initial_params"
+							break
+							;;
+
+	                *)		# Concatène la commande et les paramètres
+							if [ $command_set -eq 0 ]; then
+								COMMAND=$1
+								command_set=1
+							else
+								ACTION="$ACTION $1"
+							fi
+	                        shift
+	                        ;;
+
+	        esac
+
+	done
+
+	COMMAND="command_$COMMAND"
+
+}
+
+function is_forwarded {
+	return $FORWARDED
+}
+
+
+function load_config_file {
+
+	if has_param -c "$@"; then
+		CONFIG_FILE="$(get_param_value -c "$@")"
+	fi
+
+	if [ -f $CONFIG_FILE ]; then
+		print 3 "- Load the default configuration script: $CONFIG_FILE"
+		source $CONFIG_FILE
+	else
+		print 1 "- Invalid configuration file: $CONFIG_FILE"
+		exit 1
+	fi
+
+}
+
+function launch_framework {
+
+	# Load configuration file
+	load_config_file "$@"
+
+	# Import child pulsion projects
+	load_imports
+
+	# Parse the command line parameters
+	interpret_command_line "$@"
+
+	if ! is_forwarded "$@"; then
+
+		if ! is_function_exist $COMMAND; then
+			print 1 "- \"$1\" function implementation does not exist"
+			exit 1
+		fi;
+
+		$COMMAND
+		$ACTION
+
+	fi
+
+}
+
+
+
+function command_default {
+
+	function help {
+
+		echo "
+
+************************************************
+
+      Welcome in the pulsion application
+
+************************************************
+
+Commands available ( Config : $CONFIG_FILE )
+$(list_available command "    - ")
+
+$(imports_to_string "    - ")
+
+Parameters
+    -v [level] Mode verbose (1..5)
+    -h, --help Help for a specific command
+
+		"
+
+	}
+
+	function process {
+
+		help
+
+	}
+
+
+}
+
+# List the available function ("command" params)
+function list_available {
+
+	prefix_function=$1
+	prefix_output=$2
+
+	if [ $# -ne 2 ]; then
+		print 2 "Error : Bad usage of function \"list_available\""
+		return 1
+	fi
+
+	# Get all the declared variable begining by $1 params : (command, install...)
+	list=(`declare -F | cut -d" " -f3 | grep "^${prefix_function}_"`)
+
+	for item in ${list[@]}
+	do
+		if [[ "$item" != "$1_default" ]]; then
+			echo "$prefix_output${item/$1_/}"
+		fi
+	done
+
+}
+
+
+function command_auto-update {
+
+	function help {
+
+		echo -e "  Update Pulsion script to the latest version available on bitbucket master branch"
+		echo -e "  Usage : auto-update"
+
+	}
+
+	function process {
+
+		# Call like that fix : http://stackoverflow.com/questions/4754592/could-replacing-a-bash-script-with-a-new-version-cause-a-running-instance-of-the
+		echo "pulsion/get_pulsion && rm pulsion/pulsion.update" > pulsion/pulsion.update
+		cat pulsion/pulsion.update | bash
+
+	}
+
+}
+
+
+function command_list {
+
+	function help {
+
+		echo -e "  List all Pulsion commands availables"
+
+	}
+
+	function process {
+
+		print 1 "$(list_available command "")"
+		print 1 ""
+
+		print 1 "$(imports_to_string "")"
+
+	}
+
+}
+
+# Launch the console
+launch_framework "$@"

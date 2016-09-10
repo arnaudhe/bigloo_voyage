@@ -1,0 +1,33 @@
+{% extends "main.twig" %}
+
+{#****************************#}
+
+{% block title %}
+  My amazing website
+{% endblock %}
+
+{#****************************#}
+
+{% block pagetitle %}
+	Formulaire
+{% endblock %}
+
+{#****************************#}
+
+{% block content %}
+	<br/>
+
+	<form action="#" method="post">
+    	{{ form_widget(form) }}
+
+    	<input type="submit" name="submit" />
+	</form>
+
+	{% if data is defined %}
+    	{{data.name}} <br>
+		{{data.email}} <br>
+	{% endif %}
+
+    <br/>
+
+{% endblock %}

@@ -1,0 +1,18 @@
+<table class="table table-condensed table-striped table-hover">
+    <thead >
+        <tr>
+      		  {% for key in array|first|keys %}
+				      <th style="width:20%;"> {{ key }} </th>
+			      {% endfor %}
+        </tr>
+    </thead>
+    <tbody>
+  		{% for item in array %}
+  		  <tr>
+  			    {% for field in item %}
+        	  <td> {{ field|raw }} </td>
+        	  {% endfor %}
+        </tr>
+		  {% endfor %}
+    </tbody>
+</table>

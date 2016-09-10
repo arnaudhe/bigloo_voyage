@@ -1,0 +1,6 @@
+[submodule "nginx_pulsion"]
+	path = nginx_pulsion
+	url = https://github.com/arnaudhe/nginx_pulsion.git
+[submodule "mysql_pulsion"]
+	path = mysql_pulsion
+	url = https://github.com/arnaudhe/mysql_pulsion.git

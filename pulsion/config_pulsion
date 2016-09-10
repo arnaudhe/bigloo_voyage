@@ -1,0 +1,141 @@
+#!/bin/bash
+
+if [ -e "nginx_pulsion/pulsion/config_pusion" ]
+then
+    import nginx "./nginx_pulsion"
+fi
+
+if [ -e "mysql_pulsion/pulsion/config_pusion" ]
+then
+    import mysql "./mysql_pulsion"
+fi
+
+function command_install {
+
+    function help {
+
+        echo -e "Install silex dependencies and namespaces"
+        echo -e "usage: pulsion install [--nginx] [--mysql]"
+    }
+
+    function process {
+
+        set -e
+
+        git submodule init
+        git submodule update
+
+        import nginx "./nginx_pulsion"
+        import mysql "./mysql_pulsion"
+
+        if has_param --nginx "$@"; then
+            pulsion nginx::install
+        fi
+
+        if has_param --mysql "$@"; then
+            pulsion mysql::install
+        fi
+
+        php /usr/local/bin/composer.phar install
+        pulsion generate_database
+    }
+}
+
+function command_generate_database {
+
+    function help {
+
+        echo -e "Generate database structure on local mysql"
+
+    }
+
+    function process {
+
+        echo "To be continued..."
+
+    }
+}
+
+function command_update {
+
+    function help {
+
+        echo -e "Update silex dependencies, namespaces, and nginx/mysql runtimes"
+
+    }
+
+    function process {
+
+        set -e
+        php /usr/local/bin/composer.phar update
+        git submodule update
+    }
+}
+
+function command_start {
+
+    function help {
+
+        echo -e "Start all necessary components"
+
+    }
+
+    function process {
+
+        pulsion nginx::start
+        pulsion mysql::start
+
+    }
+}
+
+function command_restart {
+
+    function help {
+
+        echo -e "Restart all necessary components"
+
+    }
+
+    function process {
+
+        pulsion nginx::restart
+        pulsion mysql::restart
+
+    }
+}
+
+function command_stop {
+
+    function help {
+
+        echo -e "Stop all necessary components"
+
+    }
+
+    function process {
+        
+        pulsion nginx::stop
+        pulsion mysql::stop
+
+    }
+}
+
+function command_doctor {
+
+    function help {
+
+        echo -e "Check install sanity"
+
+    }
+
+    function process {
+
+        set -e
+
+        pulsion nginx::doctor
+        pulsion mysql::doctor
+
+        verbose 1 "EVERYTHING IS WORKING !"
+
+    }
+}

@@ -1,0 +1,27 @@
+{% extends "main.twig" %}
+
+{#****************************#}
+
+{% block title %}
+    Error
+{% endblock %}
+
+{#****************************#}
+
+{% block pagetitle %}
+    ERROR
+{% endblock %}
+
+{#****************************#}
+
+{% block content %}
+	<br/>
+
+    <div class="alert alert-danger" role="alert">
+        <h3>
+            {{code}}   
+        </h3>
+        {{message|raw}}
+    </div>
+
+{% endblock %}
