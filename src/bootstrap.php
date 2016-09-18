@@ -31,11 +31,15 @@ $app->register(new Silex\Provider\DoctrineServiceProvider(), array(
     'db.options' => array(
        	'driver'    => 'pdo_mysql',
         'host'      => 'localhost',
-        'dbname'    => 'db',
+        'dbname'    => 'bigloo',
         'user'      => 'root',
-        'password'  => '',
+        'password'  => '123456',
         'charset'   => 'utf8',
     ),
+));
+
+$app->register(new Silex\Provider\TranslationServiceProvider(), array(
+    'translator.messages' => array(),
 ));
 
 $app->register(new SwiftmailerServiceProvider());

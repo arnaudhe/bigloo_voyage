@@ -9,19 +9,13 @@
 {#****************************#}
 
 {% block pagetitle %}
-	Les voyages de Bigloo
+	Edition du voyage {{trip.name}}
 {% endblock %}
 
 {#****************************#}
 
 {% block content %}
     
-    <ul>
-    {% for trip in trips %}
-        <li>{{ trip.name|e }} <a href="{{ path('edit', {trip: trip.id}) }}">Edit</a> </li> 
-    {% endfor %}
-    </ul>
-
-    <a href="{{path('add')}}"> Ajouter un voyage de Bigloo </a>
+    Liste des images
 
 {% endblock %}
