@@ -51,7 +51,45 @@ function command_generate_database {
 
     function process {
 
-        echo "To be continued..."
+        set -e
+        
+        echo "CREATE DATABASE bigloo" | /usr/local/mysql/bin/mysql -uroot -p123456
+
+        pulsion update_database
+
+    }
+}
+
+function command_update_database {
+
+    function help {
+
+        echo -e "Update database contents with last SQL script"
+
+    }
+
+    function process {
+
+        lastdb=$(ls -t db | head -1)
+
+        /usr/local/mysql/bin/mysql -uroot -p123456 bigloo < "db/$lastdb"
+
+    }
+}
+
+function command_dump_database {
+
+    function help {
+
+        echo -e "Export database contents to sql script"
+
+    }
+
+    function process {
+
+        today=$(date +%Y-%m-%d)
+
+        /usr/local/mysql/bin/mysqldump --opt -uroot -p123456 bigloo > "db/bigloo_$today.sql"
 
     }
 }
