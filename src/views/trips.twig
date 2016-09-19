@@ -18,10 +18,10 @@
     
     <ul>
     {% for trip in trips %}
-        <li>{{ trip.name|e }} <a href="{{ path('edit', {trip: trip.id}) }}">Edit</a> </li> 
+        <li> <a href="{{ path('trip', {trip: trip.id}) }}"> {{ trip.name|e }} </a> </li> 
     {% endfor %}
     </ul>
 
-    <a href="{{path('add')}}"> Ajouter un voyage de Bigloo </a>
+    <a href="{{path('trip_create')}}"> Ajouter un voyage de Bigloo </a>
 
 {% endblock %}

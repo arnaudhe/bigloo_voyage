@@ -9,27 +9,6 @@ use Symfony\Component\HttpKernel\HttpKernelInterface;
 use Models\ModelFinder;
 use Models\Trip;
 
-set_time_limit(180); //Augmente le timeout à 120 secondes
-
-function sendMail($app, $to, $subject, $content)
-{
-    try
-    {
-        $app['mailer']->send(\Swift_Message::newInstance()
-                      ->setSubject($subject)
-                      ->setFrom(array('john@doe.com' => 'John Doe')) // replace with your own
-                      ->setSender('john@doe.com')
-                      ->setReplyTo('john@doe.com')
-                      ->setTo($to)   // replace with email recipient
-                      ->setBody($content));
-        return "OK";
-    }
-    catch (\Exception $e)
-    {
-        return $app['twig']->render('logs_error.twig', array('message'=>$e->getMessage()));
-    }
-}
-
 $app->error(function (\Exception $e, $code) use($app)
 {
     switch ($code)
@@ -44,44 +23,113 @@ $app->error(function (\Exception $e, $code) use($app)
     }
 });
 
-$app->get('/', function() use($app)
-{	
-    return $app['twig']->render('home.twig', ['trips' => Trip::getAllTrips($app['db'])]);
+$app->get('/', function () use ($app) 
+{
+    return $app->redirect('/trips');
 })
 ->bind('home');
 
-$app->get('/add', function() use($app)
+$app->get('/trips', function() use($app)
+{	
+    $trips = [];
+    foreach (Trip::getAllTrips($app['db']) as $trip ) 
+    {
+        $trips[] = $trip->toArray();
+    }
+
+    return $app['twig']->render('trips.twig', ['trips' => $trips]);
+})
+->bind('trips');
+
+$app->match('/trip/create', function(Request $request) use($app)
 {
     $data = array(
-        'name'  => 'Your name',
-        'email' => 'Your email',
+        'name'  => '',
     );
 
     $form = $app['form.factory']->createBuilder('form', $data)
                                 ->add('name')
-                                ->add('email')
-                                ->add('billing_plan', 'choice', ['choices' => [1 => 'free', 
-                                                                               2 => 'small_business', 
-                                                                               3 => 'corporate'],
-                                                                 'expanded' => true])
                                 ->getForm();
 
-    return $app['twig']->render('form.twig', ['form' => $form->createView()]);
-})
-->bind('add');
+    if ($request->isMethod('POST')) 
+    {
+        $form->handleRequest($request);
 
-$app->post('/add', function() use($app)
-{ 
-    return $app['twig']->render('home.twig', ['trips' => []]);
-});
+        if ($form->isValid())
+        {
+            $data = $form->getData();
+            
+            if (array_key_exists('name', $data))
+            {
+                $trip = new Trip($app['db'], ['name' => $data['name']]);
+                return $app->redirect($app['url_generator']->generate('trip_update', ['trip' => $trip->getAttribute('id')]));
+            }
+            else
+            {
+                throw new Exception ("Missing parameter 'name'");
+            }
+        }
+    }
+    else
+    {
+        return $app['twig']->render('trip_create.twig', ['form' => $form->createView()]);
+    }
+}, 'GET|POST')
+->bind('trip_create');
 
-$app->get('/edit/{trip}', function($trip) use($app)
+$app->get('/trip/{trip}', function($trip) use($app)
 {
-    $trip = new Trip($app['db'], $trip);
+    $trip = new Trip($app['db'], ['id' => $trip]);
 
-    return $app['twig']->render('edit.twig', ['trip' => $trip->getAttributes()]);
+    return $app['twig']->render('trip.twig', ['trip' => $trip->toArray()]);
 })
-->bind('edit');
+->bind('trip');
+
+
+$app->match('/trip/update/{trip}', function (Request $request, $trip) use ($app)
+{
+    $form = $app['form.factory']->createBuilder('form')
+                                ->add('description')
+                                ->add('picture', 'file')
+                                ->getForm();
+
+    $request = $app['request'];
+    $message = 'Upload a file';
+
+    $trip = new Trip($app['db'], ['id' => $trip]);
+
+    if ($request->isMethod('POST')) 
+    {
+        $form->handleRequest($request);
+        
+        if ($form->isValid())
+        {
+            $files       = $request->files->get($form->getName());
+            $path        = __DIR__.'/../web/pics/';
+            $filename    = pathinfo($files['picture']->getClientOriginalName());
+            $newFileName = md5($filename['filename'] . time()) . '.' . strtolower($filename['extension']);
+            $files['picture']->move($path, $newFileName);
+
+            $description = $form->getData()['description'];
+            
+            $trip->addPic($newFileName, $description);
+        }
+    }
+
+    return $app['twig']->render('trip_update.twig', ['trip' => $trip->toArray(), 'form' => $form->createView()]);
+    
+}, 'GET|POST')
+->bind('trip_update');
+
+$app->get('trip/delete/{trip}', function (Request $request, $trip) use ($app)
+{
+    $trip = new Trip($app['db'], ['id' => $trip]);
+    
+    //$trip->delete();
+
+    return $app->redirect($app['url_generator']->generate('trips'));
+})
+->bind('trip_delete');
 
 
 return $app;

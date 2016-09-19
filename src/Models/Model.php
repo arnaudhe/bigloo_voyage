@@ -63,7 +63,7 @@ class Model
 		return $this->existingInDB;
 	}
 
-	function setAttributes($aAttributes)
+	function setAttributes(Array $aAttributes)
 	{
 		foreach ($aAttributes as $key => $value)
 		{
@@ -157,5 +157,10 @@ class Model
 		}
 
 		return $result;
+	}
+
+	function getDb()
+	{
+		return $this->dbConnection;
 	}
 }

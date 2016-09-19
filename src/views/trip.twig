@@ -1,0 +1,29 @@
+{% extends "main.twig" %}
+
+{#****************************#}
+
+{% block title %}
+	My amazing website
+{% endblock %}
+
+{#****************************#}
+
+{% block pagetitle %}
+	{{ trip.name }} 
+    <h5> 
+        <a href="{{ path('trip_update', {trip: trip.id}) }}">Edit</a>
+        <a data-method="delete" href="{{ path('trip_delete', {trip: trip.id}) }}">Delete</a>
+    </h5>
+{% endblock %}
+
+{#****************************#}
+
+{% block content %}
+    
+    {% for pic in trip.pics %}
+    	<img src="{{web_ressources_root}}pics/{{pic.path}}"/> 
+    	</br>
+    	<p> {{pic.description}} </p>
+    {% endfor %}
+
+{% endblock %}
