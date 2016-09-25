@@ -1,26 +1,19 @@
-html {
-  height: 100%;
-}
-
 body {
   background-image: url('../img/voyage.jpg');
   background-attachment: fixed;
   background-size: 100% auto;
   position: relative;
   width:100%;
-  height: 100%;
   color:#fff;
 }
 
 .pagetitle{
-  position: absolute;
   width:100%;
   padding:15px 0px;
   background-color: #5c8597;
   color:#FFF;
   font-size: 30px;
   text-align: center;
-  bottom: 50px;
 }
 
 .pagetitle span{
@@ -32,21 +25,12 @@ body {
   color:#89d3fe;
 }
 
-.pagecontent{
-  position: absolute;
-  width:100%;
-  margin-bottom: 122px;
-  bottom:0;
-}
-
 .blur_frame {
   background-image: url('../img/voyage-blur.jpg');
   background-attachment: fixed;
   background-size: 100% auto;
 
   padding: 20px;
-
-  display: table;
 }
 
 .blur_frame .full {

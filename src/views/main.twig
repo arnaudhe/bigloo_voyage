@@ -34,18 +34,14 @@
   </head>
 
   <body>
-    
+
+    <div class="blur_frame" style={% block framegeometry %} {% endblock %}>
+      
+      {% block content %}{% endblock %}
+
+    </div><!-- /.container -->
+
     <div class="pagetitle">{% block pagetitle %}{% endblock %}</div>
-
-    <div class="pagecontent">
-
-        <div class="blur_frame" style={% block framegeometry %} {% endblock %}>
-          
-          {% block content %}{% endblock %}
-
-        </div><!-- /.container -->
-
-    </div>
 
 
     <!-- Bootstrap core JavaScript
