@@ -80,10 +80,33 @@ $app->match('/trip/create', function(Request $request) use($app)
 $app->get('/trip/{trip}', function($trip) use($app)
 {
     $trip = new Trip($app['db'], ['id' => $trip]);
+    
+    $route = sprintf("/trip/%d/pic/0", $trip->getAttribute('id'));
+    $subRequest = Request::create($route, 'GET');
+    $pic_content = $app->handle($subRequest, HttpKernelInterface::SUB_REQUEST, false)->getContent();
 
-    return $app['twig']->render('trip.twig', ['trip' => $trip->toArray()]);
+    return $app['twig']->render('trip.twig', ['trip' => $trip, 'pic_content' => $pic_content]);
 })
 ->bind('trip');
+
+$app->get('/trip/{trip}/pic/{pic}', function($trip, $pic) use($app)
+{
+    $trip = new Trip($app['db'], ['id' => $trip]);
+
+    $picArray = $trip->getPic($pic);
+
+    if (count($picArray) > 0)
+    {
+        $picContent = $app['twig']->render('trip_pic.twig', ['pic' => $picArray]);
+    }
+    else
+    {
+        $picContent = "No pics added to this trip";      
+    }
+    
+    return $picContent;
+})
+->bind('trip_pic');
 
 
 $app->match('/trip/update/{trip}', function (Request $request, $trip) use ($app)

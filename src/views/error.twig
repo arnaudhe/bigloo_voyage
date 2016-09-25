@@ -8,20 +8,35 @@
 
 {#****************************#}
 
+{% block script %}
+{% endblock %}
+
+{#****************************#}
+
 {% block pagetitle %}
     ERROR
 {% endblock %}
 
 {#****************************#}
 
+{% block framegeometry %}
+    "left: 5%;
+    bottom: 30%;
+    height: 200px;
+    width: 90%"
+{% endblock %}
+
+{#****************************#}
+
 {% block content %}
-	<br/>
 
     <div class="alert alert-danger" role="alert">
         <h3>
             {{code}}   
         </h3>
-        {{message|raw}}
+        <p>
+            {{message|raw}}
+        </p>
     </div>
 
 {% endblock %}

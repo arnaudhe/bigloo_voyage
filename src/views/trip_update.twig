@@ -8,8 +8,22 @@
 
 {#****************************#}
 
+{% block script %}
+{% endblock %}
+
+{#****************************#}
+
 {% block pagetitle %}
 	Edition du voyage {{trip.name}}
+{% endblock %}
+
+{#****************************#}
+
+{% block framegeometry %}
+    "left: 50%;
+    bottom: 10%;
+    height:60%;
+    width:45%"
 {% endblock %}
 
 {#****************************#}
@@ -19,7 +33,7 @@
     <h5> Liste des images </h5>
 
     {% for pic in trip.pics %}
-    	<img src="{{web_ressources_root}}pics/{{pic.path}}" style="height: 100px;"/> {{pic.path}} <a> Delete </a> <br/>
+    	<img class="preview" src="{{web_ressources_root}}pics/{{pic.path}}" style="height: 100px;"/> {{pic.path}} <a> Delete </a> <br/>
         <br/>
     {% endfor %}
 

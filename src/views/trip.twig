@@ -8,22 +8,61 @@
 
 {#****************************#}
 
+{% block script %}
+    <script>
+
+    var index = 0;
+
+    $(document).ready(function()
+    {
+        $(document).on("click", "#next", function () 
+        {
+            index = index + 1;
+
+            $.get("/trip/{{trip.id}}/pic/" + index, function(data)
+            {
+                $("#pic_content").html(data);
+            });
+        });
+
+        $(document).on("click", "#previous", function () 
+        {
+            index = index - 1;
+
+            $.get("/trip/{{trip.id}}/pic/" + index, function(data)
+            {
+                $("#pic_content").html(data);
+            });
+        });
+    });
+
+    </script>
+{% endblock %}
+
+{#****************************#}
+
 {% block pagetitle %}
 	{{ trip.name }} 
-    <h5> 
+    <span> 
         <a href="{{ path('trip_update', {trip: trip.id}) }}">Edit</a>
         <a data-method="delete" href="{{ path('trip_delete', {trip: trip.id}) }}">Delete</a>
-    </h5>
+    </span>
+{% endblock %}
+
+{#****************************#}
+
+{% block framegeometry %}
+    "margin:5% 0% 0% 0%;"
 {% endblock %}
 
 {#****************************#}
 
 {% block content %}
     
-    {% for pic in trip.pics %}
-    	<img src="{{web_ressources_root}}pics/{{pic.path}}"/> 
-    	</br>
-    	<p> {{pic.description}} </p>
-    {% endfor %}
+    <div id="pic_content" style="text-align:center;">
+
+        {{ pic_content|raw }}
+
+    </div>
 
 {% endblock %}

@@ -8,18 +8,33 @@
 
 {#****************************#}
 
+{% block script %}
+{% endblock %}
+
+{#****************************#}
+
 {% block pagetitle %}
 	Ajouter un voyage
 {% endblock %}
 
 {#****************************#}
 
+{% block framegeometry %}
+    "left: 50%;
+    bottom: 10%;
+    height:60%;
+    width:45%"
+{% endblock %}
+
+{#****************************#}
+
 {% block content %}
-	<br/>
+	
+    <h4> Créer un voyage </h4>
 
 	<form action="#" method="post">
     	{{ form_widget(form) }}
-
+        <br/>
     	<input type="submit" name="submit" />
 	</form>
 

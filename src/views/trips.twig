@@ -8,14 +8,27 @@
 
 {#****************************#}
 
+{% block script %}
+{% endblock %}
+
+{#****************************#}
+
 {% block pagetitle %}
-	Les voyages de Bigloo
+	LES VOYAGES DE BIGLOO
+{% endblock %}
+
+{#****************************#}
+
+{% block framegeometry %}
+    "margin : 5% 0% 0% 50%;"
 {% endblock %}
 
 {#****************************#}
 
 {% block content %}
     
+    <h4> Liste des lieux que Bigloo a visité </h4>
+
     <ul>
     {% for trip in trips %}
         <li> <a href="{{ path('trip', {trip: trip.id}) }}"> {{ trip.name|e }} </a> </li> 

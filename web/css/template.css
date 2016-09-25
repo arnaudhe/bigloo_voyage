@@ -1,9 +1,95 @@
-body {
-  padding-top: 50px;
+html {
+  height: 100%;
 }
 
-.starter-template {
-  padding: 40px 15px;
+body {
+  background-image: url('../img/voyage.jpg');
+  background-attachment: fixed;
+  background-size: 100% auto;
+  position: relative;
+  width:100%;
+  height: 100%;
+  color:#fff;
+}
+
+.pagetitle{
+  position: absolute;
+  width:100%;
+  padding:15px 0px;
+  background-color: #5c8597;
+  color:#FFF;
+  font-size: 30px;
+  text-align: center;
+  bottom: 50px;
+}
+
+.pagetitle span{
+  font-size: 14px;
+}
+
+.pagetitle a{
+  font-size: 14px;
+  color:#89d3fe;
+}
+
+.pagecontent{
+  position: absolute;
+  width:100%;
+  margin-bottom: 122px;
+  bottom:0;
+}
+
+.blur_frame {
+  background-image: url('../img/voyage-blur.jpg');
+  background-attachment: fixed;
+  background-size: 100% auto;
+
+  padding: 20px;
+
+  display: table;
+}
+
+.blur_frame .full {
+  height: 400px;
+}
+
+.blur_frame .next {
+  float:right;
+  width: 10%;
+  height:100%;
+  line-height:100%;
+  vertical-align: middle;
+  display: table-cell;
+}
+
+.blur_frame .previous {
+  float:left;
+  width: 10%;
+  height:100%;
+  line-height:100%;
+  vertical-align: middle;
+  display: table-cell;
+}
+
+.blur_frame .preview {
+  max-height: 20%;
+  max-width: 100%;
+}
+
+#pic_content .preview{
+  cursor: pointer;
+}
+
+.blur_frame a{
+  color:#89d3fe;
+}
+
+.alert-danger p {
+    margin-bottom:15px;
+}
+
+.alert-danger h3 {
+    margin-top:15px;
 }
 
 /* title */

@@ -55,6 +55,43 @@ class Trip extends Model
         return $this->getAttribute('name');
     }
 
+    function getPicNb()
+    {
+        return count($this->pics);
+    }
+
+    function getPic($index)
+    {
+        $out = [];
+
+        if (($index >= 0) && ($index < count($this->pics)))
+        {
+            $out['current'] = $this->pics[$index]->toArray();
+            if ($index > 0)
+            {
+                $out['previous'] = $this->pics[$index - 1]->toArray();
+            }
+            if ($index < (count($this->pics) - 1))
+            {
+                $out['next'] = $this->pics[$index + 1]->toArray();
+            }
+        }
+
+        return $out;
+    }
+
+    function getPicById($id)
+    {
+        foreach ($this->pics as $pic) 
+        {
+            if ($pic->getAttribute('id') == $id)
+            {
+                return $pic;
+            }
+        }
+        return 0;
+    }
+
     function addPic($path, $description)
     {
         $pic = New Pic($this->getDb(), ['id_trip' => $this->getAttribute('id'), 'path' => $path, 'description' => $description]);
